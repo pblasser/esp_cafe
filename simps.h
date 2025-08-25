@@ -1,237 +1,173 @@
-#include "mdk.h"
-#include <esp_task_wdt.h>
+#include "setup.h"
 
-static uint32_t dmall[3];
+#define SETUPPERS initDEL();
+#define BUTTONEST REG(GPIO_IN1_REG)[0]&0x1
+#define DOUBLECLK attachInterrupt(32,doubleclicker,CHANGE);
+#define TRIPLECLK
+#define PRESETTER(p) attachInterrupt(2,p,FALLING);
+#define LAMPALITY \
+ REG(GPIO_OUT_REG)[3]=((lamp?1:0)<<1);
+#define LAMPAFLIP lamp=!lamp;LAMPALITY
+#define EARTHREAD (REG(I2S_FIFO_RD_REG)[0]&0x7FF)>>3
+#define ASHWRITER(a) \
+ REG(ESP32_RTCIO_PAD_DAC1)[0]= \
+ BIT(10)|BIT(17)|BIT(18)|((a&0xFF)<<19);
+#define INTABRUPT \
+ REG(GPIO_STATUS_W1TC_REG)[0]=0xFFFFFFFF; \
+ REG(GPIO_STATUS1_W1TC_REG)[0]=0xFFFFFFFF;
+#define SPIWRITER(d) \
+ REG(SPI3_W8_REG)[0]=(d)<<16; \
+ REG(SPI3_CMD_REG)[0]=BIT(18);
+#define DACWRITER(p) SPIWRITER(0x9000|p)
+#define ADCREADER ((REG(SPI3_W0_REG)[0])>>16)&0xFFF;
+#define I2S_START
+#define I2SFINISH
+#define YELLOWERS(b) \
+ REG(GPIO_OUT_REG)[0]=((uint32_t)(b)<<12);
+#define FLIPPERAT REG(GPIO_IN1_REG)[0]&0x8
+#define SKIPPERAT REG(GPIO_IN1_REG)[0]&0x4
+#define DELAYSIZE (1<<17)
+#define FILLNOISE \
+ for(int i=0;i<DELAYSIZE;i++) dellius(i,rand(),false);
 
+bool lamp;
+int tima;
+int timahi;
+int preset;
+void (*presets[2]) ();
 
+void IRAM_ATTR doubleclicker() {
+ INTABRUPT
+ int buttnow = BUTTONEST;
+ if (buttnow) LAMPAFLIP
+ LAMPALITY
+ 
+ REG(TIMG0_T0UPDATE_REG)[0]=BIT(1);
+ tima=REG(TIMG0_T0LO_REG)[0];
+ timahi=REG(TIMG0_T0HI_REG)[0];
+ //REG(TIMG0_T0CONFIG_REG)[0]=(1<<15)|BIT(30)|BIT(31);
+ REG(TIMG0_T0LOAD_REG)[0]=BIT(1);
 
-
-
-
-
-
-
-void initRTC() {
-  esp_task_wdt_init(30, false);
-//REG(DPORT_WIFI_CLK_EN_REG)[0]=0;
-  REG(SENS_SAR_READ_CTRL2_REG)[0] |= BIT(29); //inv
-  REG(SENS_SAR_MEAS_START2_REG)[0] |= BIT(31);
-  REG(SENS_SAR_MEAS_START2_REG)[0] |= BIT(18);
-  REG(SENS_SAR_ATTEN2_REG)[0] = 0x1;//4 IO_MUX and GPIO Matrix (GPIO, IO_MUX)
-  //REG(SENS_SAR_MEAS_CTRL_REG)[0] &= ~((uint32_t)0xFFFF<<0); //clear fsm
-  //REG(SENS_SAR_MEAS_WAIT1_REG)[0] = 0x00010001;
-  //REG(SENS_SAR_MEAS_WAIT2_REG)[0] |= (2<<16);//powerdiwb forx xpdamp0
-  //REG(SENS_SAR_MEAS_WAIT2_REG)[0] &= ~((uint32_t)0xFFFF);
-  //REG(SENS_SAR_MEAS_WAIT2_REG)[0] |= 0x2;//|BIT(17)|BIT(19);
-  //REG(SENS_SAR_MEAS_WAIT2_REG)[0] |= BIT(18)|BIT(19); //force power on to xpd sar  
-  //REG(SENS_SAR_TOUCH_ENABLE_REG)[0] = 0; //touch pads off
-  REG(ESP32_RTCIO_ADC_PAD)[0] = BIT(28)|BIT(22)|BIT(21)|BIT(18);
-//28 is adc2 mux rtc, 22 fun sel 21, 18 ie
-//for sar2 that is
- // REG(ESP32_RTCIO_ADC_PAD)[0] = BIT(28)|BIT(18)|
-  //    BIT(29)|BIT(27)|BIT(26)|BIT(23);
-    REG(ESP32_SENS_SAR_MEAS_START2)[0]=BIT(18)|BIT(31)|BIT(19); //pin g4
-    REG(ESP32_SENS_SAR_MEAS_START2)[0]=BIT(18)|BIT(31)|BIT(19)|BIT(17);
+ if (buttnow==0) 
+  if (tima<0x40000){
+   preset++;
+   preset = preset %2;
+   PRESETTER(presets[preset])
+   //attachInterrupt(2,presets[0],FALLING);
+  }
 }
 
+uint8_t *delaybuffa;
+uint8_t *delaybuffb;
+uint8_t *delptr; 
+static int delayptr;
+static int delayskp;
+static int lastskp;
+int adc_read;
+int gyo;
+int ppread; //persistent_red
 
+int dellius(int ptr, int val, bool but) {
+ int zut,biz,forsh;
+ if (ptr&0x10000) 
+  delptr = delaybuffa;
+ else 
+  delptr = delaybuffb;
+ ptr = ptr&0xFFFF;
+ ptr = ptr * 3;
+ biz = ptr&1;
+ forsh = biz << 2;
+ zut = delptr[(ptr>>1)+biz]<<4;
+ zut |= (delptr[(ptr>>1)+1-biz]&(0xF<<(forsh)))>>(forsh);
+ if (!but) {
+  delptr[(ptr>>1)+biz]=(uint8_t)(val>>4);
+  delptr[(ptr>>1)+1-biz]&=(uint8_t)(0xF<<(4-forsh));
+  delptr[(ptr>>1)+1-biz]|=(uint8_t)(val&(0xF<<forsh));
+ }
+ return zut;
+}
 
+void initDEL() {
+ delaybuffa=(uint8_t*)malloc((DELAYSIZE>>2)+(DELAYSIZE>>1));
+ delaybuffb=(uint8_t*)malloc((DELAYSIZE>>2)+(DELAYSIZE>>1));
+ delptr=delaybuffa;
+ delayptr=0;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-void initDIG() {
-  //CHANG(SENS_SAR_ATTEN1_REG,0x2<<12)
-  //CHANG(SENS_SAR_ATTEN2_REG,0x2)
-  CHANG(DPORT_WIFI_CLK_EN_REG,0)
-  //SPI3 CLOCK
-  CHANGOR(DPORT_PERIP_CLK_EN_REG,BIT(4))
-  CHANGNOR(DPORT_PERIP_RST_EN_REG,BIT(4))
-  //ADC POWER ALWAYS ON
-  CHANGNO(SENS_SAR_MEAS_CTRL_REG,(uint32_t)0xFFFF)
-  
-  CHANG(SENS_SAR_MEAS_CTRL_REG,(uint32_t)0)
-  CHANG(SENS_SAR_MEAS_CTRL2_REG,(uint32_t)0)
-//LNA low noise amp example
-  //CHANG(SENS_SAR_MEAS_CTRL_REG,(uint32_t)0xFF3F038F)
-CHANG(SENS_SAR_MEAS_CTRL_REG,(uint32_t)0xFF07338F) //default
-  //REG(SENS_SAR_MEAS_WAIT1_REG)[0] = 0xFFFFFFFF;
-  CHANG(SENS_SAR_MEAS_WAIT2_REG,BIT(18)|BIT(19)|BIT(17)|BIT(16)|0xFFF)
-
-  CHANG(I2S_INT_ENA_REG,0) //disable interrupt
-  CHANGNO(I2S_INT_CLR_REG,0)
-  CHANG(I2S_CONF_REG,0)
-  CHANGNOR(I2S_CONF_REG,BIT(1))//rx reset
-  CHANGOR(I2S_CONF_REG,BIT(17)|BIT(9)) //msb right first
-  
-  CHANGNOR(I2S_CONF_REG,BIT(3)) //rx fifo reset
-  CHANGOR(I2S_CONF1_REG,BIT(7))//PCM bypass
-  
-  //enable DMA
-  CHANG(I2S_LC_CONF_REG,0)
-  CHANGNOR(I2S_LC_CONF_REG,BIT(2))//ahb fifo rst
-  CHANGNOR(I2S_LC_CONF_REG,BIT(3))//ahb reset
-  CHANGNOR(I2S_LC_CONF_REG,BIT(0))//in rst
-  CHANGOR(I2S_LC_CONF_REG,BIT(10))//burst inlink
-
-  CHANG(I2S_CONF2_REG,0);//LCD enable
-  CHANGOR(I2S_CONF2_REG,BIT(5));//LCD enable
-  
-  CHANG(I2S_FIFO_CONF_REG,BIT(12)|BIT(5)|BIT(20))
-  CHANG(I2S_FIFO_CONF_REG,BIT(5)|BIT(20))
-  CHANG(I2S_FIFO_CONF_REG,BIT(20))
-  //NODMA
-  //bit 16 is single channel|BIT(17)) is 32bit
-  //20forcemod 16rxmod 12dmaconnect 5rxdatanum32
-  CHANG(I2S_CONF_CHAN_REG,BIT(3)) //3singlechanrx
-  CHANG(I2S_PDM_CONF_REG,0)
-  CHANG(I2S_CLKM_CONF_REG,BIT(21)|CLKMAGIC)//clockenable
-  //freq 2 is bad, 
-  CHANGOR(I2S_SAMPLE_RATE_CONF_REG,(BCKMAGIC))
-  //50
-  prr("I2S_INT_RAW_REG",I2S_INT_RAW_REG); 
-  
-  //adc set i2s data len patterns should be zero 
-  //adc set data pattern 
-  CHANG(APB_SARADC_SAR1_PATT_TAB1_REG,ADC1_PATT)  
-  CHANG(APB_SARADC_SAR2_PATT_TAB1_REG,ADC2_PATT)
-  
-  //adc set controller DIG
-  /////////////////////adc 1 was on but now the force is gone
-  //CHANGOR(SENS_SAR_READ_CTRL_REG,BIT(27)|BIT(28))
-  //CHANG(SENS_SAR_READ_CTRL_REG,BIT(27)|BIT(28)|BIT(17)|BIT(16)|0xFFFF)//0xFFFF
-  //bottom bytes sample cycle and clock div
-  
-  CHANGOR(SENS_SAR_READ_CTRL2_REG,BIT(28)|BIT(29))
-  //CHANG(ESP32_SENS_SAR_MEAS_START1,BIT(31)|BIT(19+6)|BIT(18)) 
-  //CHANG(ESP32_SENS_SAR_MEAS_START2,BIT(31)|BIT(19)|BIT(18))
-   //seems to not need bitmap
+ esp_task_wdt_init(30, false);
  
- 
-   #define CTRLJING BIT(26)|(CLKDIVMAGIC)|BIT(6)|BIT(2)|BIT(3)
-   
-   #define CTRLPATT 0 //BIT(15)|BIT(19)
-  #define CTRLJONG BIT(24)|BIT(23)
-    //26datatoi2s 25sarsel 9clkdiv4 6clkgated 3double 2sar2mux
-    //8 clock div 2   
-      CHANG(APB_SARADC_CTRL_REG,CTRLJING|CTRLPATT)
+ REG(ESP32_SENS_SAR_DAC_CTRL1)[0] = 0x0; 
+ REG(ESP32_SENS_SAR_DAC_CTRL2)[0] = 0x0; 
 
+ initDIG();
+ //function 2 on the 12 block
+ REG(IO_MUX_GPIO12ISH_REG)[0]=BIT(13); //sdi2 q MISO
+ REG(IO_MUX_GPIO12ISH_REG)[1]=BIT(13); //d MOSI
+ REG(IO_MUX_GPIO12ISH_REG)[2]=BIT(13); //clk
+ REG(IO_MUX_GPIO12ISH_REG)[3]=BIT(13); //cs0
+ //perip clock bit 16 is spi3, 13 is timer0
+ CHANGOR(DPORT_PERIP_CLK_EN_REG,BIT(16)|BIT(13))
+ CHANGNOR(DPORT_PERIP_RST_EN_REG,BIT(16)|BIT(13))
 
-  //REG(APB_SARADC_FSM_REG)[0]=0x0216FF08;
-  CHANG(APB_SARADC_FSM_REG,0xFF056408) //from code example
-  CHANG(APB_SARADC_FSM_REG,0xFF056408) //from code example
-  REG(APB_SARADC_FSM_REG)[0]=FSMAGIC;
- //timekeep-1 startwait5 standbywait100 rstbwait8
-
-  CHANGNOR(APB_SARADC_CTRL_REG,CTRLJONG)
-//  CHANGOR(I2S_CLKM_CONF_REG,BIT(21)|4)//clockenable
-  CHANGOR(APB_SARADC_CTRL2_REG,BIT(10)|BIT(9)|BIT(0));
-   CHANG(APB_SARADC_CTRL2_REG,BIT(10)|BIT(9)|BIT(1)|BIT(0));//trying to limit to 1
-
-   //inverting and not inverting 10 and 9 data to adc ctrl no effect
-   //CHANG(APB_SARADC_CTRL2_REG,BIT(1)|BIT(0));//trying to limit to 1
-   REG(SENS_SAR_TOUCH_ENABLE_REG)[0] = 0;
-
-#define bufflough 7//3
-dmall[0]=0xC0|BIT(bufflough+12)|BIT(bufflough);
-  //owner dma, eof, 128, 128
-  //uint16_t*buff=&dmabuff[0];
-  //dmall[1]=(uint32_t)buff;
-  dmall[2]=0;
-  //uint8_t*duff=&delaybuff[0];
-  uint32_t*muff=&dmall[0];
-  //printf("iBUFF%08x dBUFF%08x dBmall%08x\n",(int)buff, (int)duff, (int)muff);
-
-
-
-  CHANG(APB_SARADC_CTRL_REG,CTRLJONG|CTRLJING|CTRLPATT)
-  
-  
-  CHANG(I2S_RXEOF_NUM_REG,BIT(bufflough-2))
-    CHANG(I2S_RXEOF_NUM_REG,1)
-  CHANGOR(I2S_IN_LINK_REG,(0xFFFFF&(int)muff))
-      //REG(I2S_IN_LINK_REG)[0]|=BIT(30);
-  CHANGNOR(I2S_CONF_REG,BIT(1))//rx reset  
-  CHANGNOR(I2S_CONF_REG,BIT(3)) //rx fifo reset
-    CHANG(APB_SARADC_CTRL_REG,CTRLJING|CTRLPATT)
-   //pattern pointer cleared
-    CHANGOR(I2S_IN_LINK_REG,BIT(29))
+ REG(TIMG0_T0CONFIG_REG)[0]=(1<<18)|BIT(30)|BIT(31);
     
-    REG(I2S_INT_CLR_REG)[0]=0xFFFF;
-  //REG(I2S_CONF_REG)[0]=BIT(5)
- //REG(I2S_CONF_REG)[0]=BIT(5)|BIT(1);
-  REG(I2S_CONF_REG)[0]=BIT(17)|BIT(9)|BIT(5); //start rx
-  //  REG(I2S_CONF_REG)[0]=BIT(9)|BIT(5); //start rx
-}
+ REG(IO_MUX_GPIO5_REG)[0]=BIT(12); //sdi3 cs0
+ REG(IO_MUX_GPIO18_REG)[0]=BIT(12); //sdi3 clk
+ REG(IO_MUX_GPIO19_REG)[0]=BIT(12)|BIT(9); //sdi3 q MISO
+ REG(IO_MUX_GPIO23_REG)[0]=BIT(12); //sdi3 d MOSI
+ REG(SPI3_MOSI_DLEN_REG)[0]=15;
+ REG(SPI3_MISO_DLEN_REG)[0]=15;
+ REG(SPI3_USER_REG)[0]=BIT(25)|BIT(0)|BIT(27)|BIT(28)|BIT(7)|BIT(6)|BIT(5)|BIT(11)|BIT(10);
+ //USR_MOSI, MISO_HIGHPART, and DOUTDIN
+ REG(SPI3_PIN_REG)[0]=BIT(29);
+ //REG(SPI3_CTRL2_REG)[0]=BIT(17);
+ REG(SPI3_CLOCK_REG)[0]=(1 <<18)|(3<<12)|(1<<6)|3;
 
- 
-void sset(void) {
-  //esp_task_wdt_init(30, false);
-  //to be fixed
+ #define SPINNER 500000
+
+ spin(SPINNER);
+ spin(SPINNER*5);
+ SPIWRITER(0); 
+ SPIWRITER(0); 
   
-  REG(ESP32_SENS_SAR_DAC_CTRL1)[0] = 0x0; 
-  REG(ESP32_SENS_SAR_DAC_CTRL2)[0] = 0x0; 
-  initDIG();
-      
-  //function 2 on the 12 block
-  REG(IO_MUX_GPIO12ISH_REG)[0]=BIT(13);
-  REG(IO_MUX_GPIO12ISH_REG)[1]=BIT(13);
-  REG(IO_MUX_GPIO12ISH_REG)[2]=BIT(13);
-  REG(IO_MUX_GPIO12ISH_REG)[3]=BIT(13);
+  //SPIRTER(0b0111110110101100); //sw_reset
+  SPIWRITER(0x1201); //adc_seq,9rep,1chan0
+  SPIWRITER(0x1800); //gen_ctrl_reg
+  SPIWRITER(0x2001); //adc_config,io0adc0
+  SPIWRITER(0x2802); //dac_config,io1dac1
+  SPIWRITER(0x5a00); //pd_ref_ctrl,9vref
+  
+  //SPIRTER(0b0111110110101100); //sw_reset
+  SPIWRITER(0x1201); //adc_seq,9rep,1chan0
+  SPIWRITER(0x1800); //gen_ctrl_reg
+  SPIWRITER(0x2001); //adc_config,io0adc0
+  SPIWRITER(0x2802); //dac_config,io1dac1
+  SPIWRITER(0x5a00); //pd_ref_ctrl,9vref
+  
+
   //straight out
-    GPIO_FUNC_OUT_SEL_CFG_REG[5]=256;
+  //LED//
+  #define GPIO_FUNC_OUT_SEL_CFG_REG REG(0X3ff44530)   
+  GPIO_FUNC_OUT_SEL_CFG_REG[33]=256;
   GPIO_FUNC_OUT_SEL_CFG_REG[12]=256;
   GPIO_FUNC_OUT_SEL_CFG_REG[13]=256;
   GPIO_FUNC_OUT_SEL_CFG_REG[14]=256;
   GPIO_FUNC_OUT_SEL_CFG_REG[15]=256;
   GPIO_FUNC_OUT_SEL_CFG_REG[16]=256;
   GPIO_FUNC_OUT_SEL_CFG_REG[17]=256;
-  GPIO_FUNC_OUT_SEL_CFG_REG[18]=256;
-  GPIO_FUNC_OUT_SEL_CFG_REG[19]=256;
+  //GPIO_FUNC_OUT_SEL_CFG_REG[18]=256;
+  //GPIO_FUNC_OUT_SEL_CFG_REG[19]=256;
   GPIO_FUNC_OUT_SEL_CFG_REG[21]=256;
   GPIO_FUNC_OUT_SEL_CFG_REG[22]=256;
-  GPIO_FUNC_OUT_SEL_CFG_REG[23]=256;
+  //GPIO_FUNC_OUT_SEL_CFG_REG[23]=256;
+  GPIO_FUNC_OUT_SEL_CFG_REG[26]=256;
   GPIO_FUNC_OUT_SEL_CFG_REG[27]=256;
-  REG(GPIO_ENABLE_REG)[0]=BIT(5)|BIT(12)|BIT(13)
-  |BIT(14)|BIT(15)|BIT(16)|BIT(17)|BIT(18)
-  |BIT(19)|BIT(21)|BIT(22)|BIT(23)|BIT(27);
-  //36 and 39  
-  REG(GPIO_ENABLE_REG)[3]=0;
-    REG(IO_MUX_GPIO32_REG)[0]=BIT(9)|BIT(8); //input enable
-    REG(IO_MUX_GPIO32_REG)[1]=BIT(9)|BIT(8); //input enable
-
- // REG(IO_MUX_GPIO36_REG)[0]=BIT(9)|BIT(8); //input enable
- // REG(IO_MUX_GPIO36_REG)[3]=BIT(9)|BIT(8); //input enable
+  REG(GPIO_ENABLE_REG)[0]=BIT(12)|BIT(13)
+  |BIT(14)|BIT(15)|BIT(16)|BIT(17)
+  |BIT(21)|BIT(22)|BIT(26)|BIT(27); //ouit freaqs  
+  REG(GPIO_ENABLE_REG)[3]=2; //output enable 33
+  REG(IO_MUX_GPIO32_REG)[0]=BIT(9)|BIT(8); //input enable
   REG(IO_MUX_GPIO34_REG)[1]=BIT(9)|BIT(8); //input enable
-  REG(IO_MUX_GPIO34_REG)[0]=0;
-
-
-  
-  //xtosy(0,digHandler);
-  //ets_isr_unmask(1u << 0); 
-  //REG(DPORT_PRO_GPIO_INTERRUPT_MAP_REG)[0]=0;
-  //REG(GPIO_PIN_REG)[2]=BIT(15)|BIT(8)|BIT(8);
-  //7risingedge 8falling) 15prointerrupt 13appinterrup
+  REG(IO_MUX_GPIO34_REG)[0]=BIT(9)|BIT(8); //input enable
   REG(IO_MUX_GPIO2_REG)[0]=BIT(9)|BIT(8); //input enable
-  //pinMode(2, INPUT_PULLUP);
-
-
-}  
+ 
+ }

@@ -1,31 +1,35 @@
-// Copyright (c) 2022 Cesanta
-// All rights reserved
-
-#pragma once
-
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <esp_task_wdt.h>
+
+
+
+#define FSMAGIC 0x0250FF0F //quieter than ? 0x0405FF08;
+//try ff50ff08
+//0xFF056408 from code example
+ //timekeep-1 startwait5 standbywait100 rstbwait8
+ //2 8 FF 8
+// 2 16 FF 08
+#define CLKDIVMAGIC ((8)<<9) //7 and 8 2<<7
+#define BCKMAGIC 6<<6 //6 7
+#define CLKMAGIC 6 //4
+#define ADC1_PATT (0x6C<<24)
+#define ADC2_PATT (0x0D<<24)
+
 
 #define BIT(x) ((uint32_t) 1U << (x))
 #define REG(x) ((volatile uint32_t *) (x))
-
-
-#define SPI2_CMD_REG  0x3ff64000
-#define SPI2_CTRL_REG  0x3ff64008
-#define SPI2_CTRL2_REG  0x3ff64014
-#define SPI2_CLOCK_REG  0x3ff64018
-#define SPI2_PIN_REG  0x3ff64034
-#define SPI2_W0_REG  0x3ff64080
-#define SPI2_W8_REG  0x3ff640a0
+#define CHANG(reg, val) REG(reg)[0] = (val); 
+#define CHANGOR(reg, val) REG(reg)[0] |= (val); 
+#define CHANGNO(reg, val) REG(reg)[0] &= ~(uint32_t)(val); 
+#define CHANGNOR(reg, val)  CHANGOR(reg, val) \
+ CHANGNO(reg, val)
 
 #define SPI3_MISO_DLEN_REG  0x3ff64028
-#define SPI2_MOSI_DLEN_REG  0x3ff6402C
-#define SPI2_USER_REG  0x3ff6401C
-
 #define SPI3_CMD_REG  0x3ff65000
 #define SPI3_CTRL_REG  0x3ff65008
 #define SPI3_CTRL2_REG  0x3ff65014
@@ -33,31 +37,27 @@
 #define SPI3_PIN_REG  0x3ff65034
 #define SPI3_W0_REG  0x3ff65080
 #define SPI3_W8_REG  0x3ff650a0
-
 #define SPI3_MOSI_DLEN_REG  0x3ff65028
-
-#define SPI3_MIS0_DLEN_REG  0x3ff6502C
+//#define SPI3_MIS0_DLEN_REG  0x3ff6502C
 #define SPI3_USER_REG  0x3ff6501C
-
-
 
 #define DPORT_PERIP_CLK_EN_REG 0x3FF000C0
 #define DPORT_PERIP_RST_EN_REG 0x3FF000C4
 #define DPORT_WIFI_CLK_EN_REG 0x3FF000CC
 #define DPORT_PRO_GPIO_INTERRUPT_MAP_REG 0x3FF0015C
 #define GPIO_PIN_REG 0x3FF44088
-#define IO_MUX_GPIO2_REG 0x3FF49040
+//#define IO_MUX_GPIO2_REG 0x3FF49040
 #define IO_MUX_GPIO12ISH_REG 0x3FF49030
-#define IO_MUX_GPIO5_REG 0x3FF4906c
-#define IO_MUX_GPIO18_REG 0x3FF49070
-#define IO_MUX_GPIO19_REG 0x3FF49074
-#define IO_MUX_GPIO23_REG 0x3FF4908c
-#define IO_MUX_GPIO16_REG 0x3FF4904C
-#define IO_MUX_GPIO32_REG 0x3FF4901C
-#define IO_MUX_GPIO34_REG 0x3FF49014
-#define IO_MUX_GPIO36_REG 0x3FF49004
-#define GPIO_STATUS_REG 0x3FF44044
-#define GPIO_STATUS_W1TC_REG 0x3FF4404C
+//#define IO_MUX_GPIO5_REG 0x3FF4906c
+//#define IO_MUX_GPIO18_REG 0x3FF49070
+//#define IO_MUX_GPIO19_REG 0x3FF49074
+//#define IO_MUX_GPIO23_REG 0x3FF4908c
+//#define IO_MUX_GPIO16_REG 0x3FF4904C
+//#define IO_MUX_GPIO32_REG 0x3FF4901C
+//#define IO_MUX_GPIO34_REG 0x3FF49014
+//#define IO_MUX_GPIO36_REG 0x3FF49004
+//#define GPIO_STATUS_REG 0x3FF44044
+//#define GPIO_STATUS_W1TC_REG 0x3FF4404C
 
 
 #define TIMG0_T0CONFIG_REG 0x3FF5F000
@@ -144,142 +144,149 @@
 #define I2S_RXEOF_NUM_REG 0x3FF4F024
 #define I2S_IN_LINK_REG 0x3FF4F034
 #define I2S_INLINK_DSCR_REG 0x3FF4F048
-//CALL REGS AS REGS AND NOT IF NOT
-
-extern  void ets_isr_unmask(uint32_t mask);
-extern  void xtos_set_interrupt_handler(int irq_number, void(*function)(void));
-// void (*xtosy)(int,void(*function)(void))=(void(*)(int,void(*)()))0x4000bf78;
-
-
-
-
 
 #define ESP32_DPORT 0x3ff00000
-#define ESP32_AES 0x3ff01000
-#define ESP32_RSA 0x3ff02000
-#define ESP32_SHA 0x3ff03000
-#define ESP32_FLASH_MMU_TABLE_PRO 0x3ff10000
-#define ESP32_FLASH_MMU_TABLE_APP 0x3ff12000
-#define ESP32_DPORT_END 0x3ff13FFC
-#define ESP32_UART0 0x3ff40000
-#define ESP32_SPI1 0x3ff42000
-#define ESP32_SPI0 0x3ff43000
-#define ESP32_GPIO 0x3ff44000
-#define ESP32_GPIO_SD 0x3ff44f00
-#define ESP32_FE2 0x3ff45000
-#define ESP32_FE 0x3ff46000
-#define ESP32_FRC_TIMER 0x3ff47000
-#define ESP32_RTCCNTL 0x3ff48000
-#define ESP32_RTCIO 0x3ff48400
-#define ESP32_SENS 0x3ff48800
-#define ESP32_RTC_I2C 0x3ff48C00
-#define ESP32_IO_MUX 0x3ff49000
-#define ESP32_HINF 0x3ff4B000
-#define ESP32_UHCI1 0x3ff4C000
-#define ESP32_I2S 0x3ff4F000
-#define ESP32_UART1 0x3ff50000
-#define ESP32_BT 0x3ff51000
-#define ESP32_I2C_EXT 0x3ff53000
-#define ESP32_UHCI0 0x3ff54000
-#define ESP32_SLCHOST 0x3ff55000
-#define ESP32_RMT 0x3ff56000
-#define ESP32_PCNT 0x3ff57000
-#define ESP32_SLC 0x3ff58000
-#define ESP32_LEDC 0x3ff59000
-#define ESP32_EFUSE 0x3ff5A000
-#define ESP32_SPI_ENCRYPT 0x3ff5B000
-#define ESP32_NRX 0x3ff5CC00
-#define ESP32_BB 0x3ff5D000
-#define ESP32_PWM 0x3ff5E000
-#define ESP32_TIMERGROUP0 0x3ff5F000
-#define ESP32_TIMERGROUP1 0x3ff60000
-#define ESP32_RTCMEM0 0x3ff61000
-#define ESP32_RTCMEM1 0x3ff62000
-#define ESP32_RTCMEM2 0x3ff63000
-#define ESP32_SPI2 0x3ff64000
-#define ESP32_SPI3 0x3ff65000
-#define ESP32_SYSCON 0x3ff66000
-#define ESP32_APB_CTRL 0x3ff66000  // Old name for SYSCON, to be removed
-#define ESP32_I2C1_EXT 0x3ff67000
-#define ESP32_SDMMC 0x3ff68000
-#define ESP32_EMAC 0x3ff69000
-#define ESP32_CAN 0x3ff6B000
-#define ESP32_PWM1 0x3ff6C000
-#define ESP32_I2S1 0x3ff6D000
-#define ESP32_UART2 0x3ff6E000
-#define ESP32_PWM2 0x3ff6F000
-#define ESP32_PWM3 0x3ff70000
-#define PERIPHS_SPI_ENCRYPTADDR ESP32_SPI_ENCRYPT
 
 
-void prr(const char * c, uint32_t r)  {
-  printf("%s %08x\n",c,(int)REG(r)[0]);
-}
-  int preval;
 
-#define CHANG(reg, val) \
- preval = (int)REG(reg)[0]; \
- REG(reg)[0] = (val); \
- printf("%s %08x--->%08x\n",#reg,preval,(int)REG(reg)[0]); 
- 
-#define CHANGOR(reg, val) \
- preval = (int)REG(reg)[0]; \
- REG(reg)[0] |= (val); \
- printf("%s %08x--->%08x\n",#reg,preval,(int)REG(reg)[0]); 
- 
-#define CHANGNO(reg, val) \
- preval = (int)REG(reg)[0]; \
- REG(reg)[0] &= ~(uint32_t)(val); \
- printf("%s %08x--->%08x\n",#reg,preval,(int)REG(reg)[0]); 
- 
-#define CHANGNOR(reg, val) \
- preval = (int)REG(reg)[0]; \
- REG(reg)[0] |= (val); \
- REG(reg)[0] &= ~(uint32_t)(val); \
- printf("%s %08x-%08x->%08x\n",#reg,preval,(int)(preval|(int)(val)),(int)REG(reg)[0]); 
 
-// Perform `count` "NOP" operations
+
 static inline void spin(volatile unsigned long count) {
   while (count--) asm volatile("nop");
 }
 
-static inline void wdt_feed(void) {
-  REG(ESP32_RTCCNTL)[40] |= BIT(31);
+//#define GPIO_FUNC_OUT_SEL_CFG_REG REG(0X3ff44530)  // Pins 0-39
+//#define GPIO_FUNC_IN_SEL_CFG_REG REG(0X3ff44130)   // Pins 0-39
+//#define GPIO_OUT_REG REG(0X3ff44004)               // Pins 0-31
+//#define GPIO_IN_REG REG(0x3FF4403C)                // Pins 0-31
+//#define GPIO_ENABLE_REG REG(0X3ff44020)            // Pins 0-31
+//#define GPIO_OUT1_REG REG(0X3ff44010)              // Pins 32-39
+//#define GPIO_IN1_REG REG(0X3ff44040)               // Pins 32-39
+//#define GPIO_ENABLE1_REG REG(0X3ff4402c)           // Pins 32-39
+
+
+static uint32_t dmall[3];
+
+void initDIG() {
+  //CHANG(SENS_SAR_ATTEN1_REG,0x2<<12)
+  //CHANG(SENS_SAR_ATTEN2_REG,0x2)
+  CHANG(DPORT_WIFI_CLK_EN_REG,0)
+  //SPI3 CLOCK
+  CHANGOR(DPORT_PERIP_CLK_EN_REG,BIT(4))
+  CHANGNOR(DPORT_PERIP_RST_EN_REG,BIT(4))
+  //ADC POWER ALWAYS ON
+  CHANGNO(SENS_SAR_MEAS_CTRL_REG,(uint32_t)0xFFFF)
+  
+  CHANG(SENS_SAR_MEAS_CTRL_REG,(uint32_t)0)
+  CHANG(SENS_SAR_MEAS_CTRL2_REG,(uint32_t)0)
+//LNA low noise amp example
+  //CHANG(SENS_SAR_MEAS_CTRL_REG,(uint32_t)0xFF3F038F)
+CHANG(SENS_SAR_MEAS_CTRL_REG,(uint32_t)0xFF07338F) //default
+  //REG(SENS_SAR_MEAS_WAIT1_REG)[0] = 0xFFFFFFFF;
+  CHANG(SENS_SAR_MEAS_WAIT2_REG,BIT(18)|BIT(19)|BIT(17)|BIT(16)|0xFFF)
+
+  CHANG(I2S_INT_ENA_REG,0) //disable interrupt
+  CHANGNO(I2S_INT_CLR_REG,0)
+  CHANG(I2S_CONF_REG,0)
+  CHANGNOR(I2S_CONF_REG,BIT(1))//rx reset
+  CHANGOR(I2S_CONF_REG,BIT(17)|BIT(9)) //msb right first
+  
+  CHANGNOR(I2S_CONF_REG,BIT(3)) //rx fifo reset
+  CHANGOR(I2S_CONF1_REG,BIT(7))//PCM bypass
+  
+  //enable DMA
+  CHANG(I2S_LC_CONF_REG,0)
+  CHANGNOR(I2S_LC_CONF_REG,BIT(2))//ahb fifo rst
+  CHANGNOR(I2S_LC_CONF_REG,BIT(3))//ahb reset
+  CHANGNOR(I2S_LC_CONF_REG,BIT(0))//in rst
+  CHANGOR(I2S_LC_CONF_REG,BIT(10))//burst inlink
+
+  CHANG(I2S_CONF2_REG,0);//LCD enable
+  CHANGOR(I2S_CONF2_REG,BIT(5));//LCD enable
+  
+  CHANG(I2S_FIFO_CONF_REG,BIT(12)|BIT(5)|BIT(20))
+  CHANG(I2S_FIFO_CONF_REG,BIT(5)|BIT(20))
+  CHANG(I2S_FIFO_CONF_REG,BIT(20))
+  //NODMA
+  //bit 16 is single channel|BIT(17)) is 32bit
+  //20forcemod 16rxmod 12dmaconnect 5rxdatanum32
+  CHANG(I2S_CONF_CHAN_REG,BIT(3)) //3singlechanrx
+  CHANG(I2S_PDM_CONF_REG,0)
+  CHANG(I2S_CLKM_CONF_REG,BIT(21)|CLKMAGIC)//clockenable
+  //freq 2 is bad, 
+  CHANGOR(I2S_SAMPLE_RATE_CONF_REG,(BCKMAGIC))
+  //50
+  //prr("I2S_INT_RAW_REG",I2S_INT_RAW_REG); 
+  
+  //adc set i2s data len patterns should be zero 
+  //adc set data pattern 
+  CHANG(APB_SARADC_SAR1_PATT_TAB1_REG,ADC1_PATT)  
+  CHANG(APB_SARADC_SAR2_PATT_TAB1_REG,ADC2_PATT)
+  
+  //adc set controller DIG
+  /////////////////////adc 1 was on but now the force is gone
+  //CHANGOR(SENS_SAR_READ_CTRL_REG,BIT(27)|BIT(28))
+  //CHANG(SENS_SAR_READ_CTRL_REG,BIT(27)|BIT(28)|BIT(17)|BIT(16)|0xFFFF)//0xFFFF
+  //bottom bytes sample cycle and clock div
+  
+  CHANGOR(SENS_SAR_READ_CTRL2_REG,BIT(28)|BIT(29))
+  //CHANG(ESP32_SENS_SAR_MEAS_START1,BIT(31)|BIT(19+6)|BIT(18)) 
+  //CHANG(ESP32_SENS_SAR_MEAS_START2,BIT(31)|BIT(19)|BIT(18))
+   //seems to not need bitmap
+ 
+ 
+   #define CTRLJING BIT(26)|(CLKDIVMAGIC)|BIT(6)|BIT(2)|BIT(3)
+   
+   #define CTRLPATT 0 //BIT(15)|BIT(19)
+  #define CTRLJONG BIT(24)|BIT(23)
+    //26datatoi2s 25sarsel 9clkdiv4 6clkgated 3double 2sar2mux
+    //8 clock div 2   
+      CHANG(APB_SARADC_CTRL_REG,CTRLJING|CTRLPATT)
+
+
+  //REG(APB_SARADC_FSM_REG)[0]=0x0216FF08;
+  CHANG(APB_SARADC_FSM_REG,0xFF056408) //from code example
+  CHANG(APB_SARADC_FSM_REG,0xFF056408) //from code example
+  REG(APB_SARADC_FSM_REG)[0]=FSMAGIC;
+ //timekeep-1 startwait5 standbywait100 rstbwait8
+
+  CHANGNOR(APB_SARADC_CTRL_REG,CTRLJONG)
+//  CHANGOR(I2S_CLKM_CONF_REG,BIT(21)|4)//clockenable
+  CHANGOR(APB_SARADC_CTRL2_REG,BIT(10)|BIT(9)|BIT(0));
+   CHANG(APB_SARADC_CTRL2_REG,BIT(10)|BIT(9)|BIT(1)|BIT(0));//trying to limit to 1
+
+   //inverting and not inverting 10 and 9 data to adc ctrl no effect
+   //CHANG(APB_SARADC_CTRL2_REG,BIT(1)|BIT(0));//trying to limit to 1
+   REG(SENS_SAR_TOUCH_ENABLE_REG)[0] = 0;
+
+#define bufflough 7//3
+dmall[0]=0xC0|BIT(bufflough+12)|BIT(bufflough);
+  //owner dma, eof, 128, 128
+  //uint16_t*buff=&dmabuff[0];
+  //dmall[1]=(uint32_t)buff;
+  dmall[2]=0;
+  //uint8_t*duff=&delaybuff[0];
+  uint32_t*muff=&dmall[0];
+  //printf("iBUFF%08x dBUFF%08x dBmall%08x\n",(int)buff, (int)duff, (int)muff);
+
+
+
+  CHANG(APB_SARADC_CTRL_REG,CTRLJONG|CTRLJING|CTRLPATT)
+  
+  
+  CHANG(I2S_RXEOF_NUM_REG,BIT(bufflough-2))
+    CHANG(I2S_RXEOF_NUM_REG,1)
+  CHANGOR(I2S_IN_LINK_REG,(0xFFFFF&(int)muff))
+      //REG(I2S_IN_LINK_REG)[0]|=BIT(30);
+  CHANGNOR(I2S_CONF_REG,BIT(1))//rx reset  
+  CHANGNOR(I2S_CONF_REG,BIT(3)) //rx fifo reset
+    CHANG(APB_SARADC_CTRL_REG,CTRLJING|CTRLPATT)
+   //pattern pointer cleared
+    CHANGOR(I2S_IN_LINK_REG,BIT(29))
+    
+    REG(I2S_INT_CLR_REG)[0]=0xFFFF;
+  //REG(I2S_CONF_REG)[0]=BIT(5)
+ //REG(I2S_CONF_REG)[0]=BIT(5)|BIT(1);
+  REG(I2S_CONF_REG)[0]=BIT(17)|BIT(9)|BIT(5); //start rx
+  //  REG(I2S_CONF_REG)[0]=BIT(9)|BIT(5); //start rx
 }
-
-static inline void wdt_disable(void) {
-  REG(ESP32_RTCCNTL)[41] = 0x50d83aa1;  // Disable write protection
-  wdt_feed();
-  REG(ESP32_RTCCNTL)[35] = 0;      // Disable RTC WDT
-  REG(ESP32_TIMERGROUP0)[18] = 0;  // Disable task WDT
-  REG(ESP32_TIMERGROUP1)[18] = 0;  // Disable task WDT
-}
-
-
-//RTC_CNTL_CLK_CONF_REG 70
-
-static inline void cpu_freq_240(void) {
-  // TRM 3.2.3. We must set SEL_0 = 1, SEL_1 = 2
-  // *SEL_0: The vaule of register RTC_CNTL_SOC_CLK_SEL
-  // *SEL_1: The vaule of register CPU_CPUPERIOD_SEL
-  REG(ESP32_RTCCNTL)[28] |= 1UL << 27;  // Register 31.24  SEL0 -> 1
-//DPORT_CPU_PER_CONF_REG 3c
-  REG(ESP32_DPORT)[15] |= 2UL << 0;     // Register 5.9    SEL1 -> 2
-  REG(ESP32_UART0)[5] = 0x4001e0;       // UART_CLKDIV_REG
-}
-
-static inline void soc_init(void) {
-  wdt_disable();
-  REG(ESP32_TIMERGROUP0)[0] |= BIT(31);  // Enable TIMG0
-  cpu_freq_240();
-}
-
-// API GPIO
-#define GPIO_FUNC_OUT_SEL_CFG_REG REG(0X3ff44530)  // Pins 0-39
-#define GPIO_FUNC_IN_SEL_CFG_REG REG(0X3ff44130)   // Pins 0-39
-#define GPIO_OUT_REG REG(0X3ff44004)               // Pins 0-31
-#define GPIO_IN_REG REG(0x3FF4403C)                // Pins 0-31
-#define GPIO_ENABLE_REG REG(0X3ff44020)            // Pins 0-31
-#define GPIO_OUT1_REG REG(0X3ff44010)              // Pins 32-39
-#define GPIO_IN1_REG REG(0X3ff44040)               // Pins 32-39
-#define GPIO_ENABLE1_REG REG(0X3ff4402c)           // Pins 32-39
