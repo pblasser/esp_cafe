@@ -5,7 +5,7 @@
 void setup() { 
  SETUPPERS
  lamp=true;
- LAMPALITY
+ LAMPLIGHT
  presets[0]=coco;
  presets[1]=echo;
  FILLNOISE
