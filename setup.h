@@ -1,3 +1,4 @@
+
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -5,8 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <esp_task_wdt.h>
-
-
 
 #define FSMAGIC 0x0250FF0F //quieter than ? 0x0405FF08;
 //try ff50ff08
