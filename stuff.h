@@ -1,5 +1,6 @@
 #include "setup.h"
 
+#define ENNEAGRAM simpleHelpers
 #define SETUPPERS initDEL();
 #define BUTTONEST REG(GPIO_IN1_REG)[0]&0x1
 #define CLICKETTE(c) attachInterrupt(32,c,CHANGE);
