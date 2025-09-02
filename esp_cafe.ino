@@ -1,6 +1,10 @@
 
 
+
+#define BYTECODES t*(t&16384?7:5)*(3-(3&t>>9)+(3&t>>8))>>(3&-t>>(t&4096?2:16))|t>>3; 
+
 #include "synths.h"
+
 
 void setup() { 
  SETUPPERS

@@ -65,10 +65,12 @@ void IRAM_ATTR echo() {
 
 void IRAM_ATTR bytebeats() {
  INTABRUPT
- DACWRITER((pout&0xFFF))
+// DACWRITER(((pout<<4)&0xFF0))
+ 
+ DACWRITER(((pout&0xFFF)))
  gyo=ADCREADER
  
- pout =t*(t&16384?7:5)*(3-(3&t>>9)+(3&t>>8))>>(3&-t>>(t&4096?2:16))|t>>3;
+ pout =BYTECODES;
 
  if (FLIPPERAT) t++;
  else t--;
