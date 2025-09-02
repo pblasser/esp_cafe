@@ -2,17 +2,17 @@
 
 void IRAM_ATTR coco() {
  INTABRUPT
- DACWRITER(ppread)
+ DACWRITER(pout)
  gyo=ADCREADER
- ppread=dellius(delayptr,gyo,lamp);
- if (FLIPPERAT) delayptr++;
- else delayptr--; 
- delayptr=delayptr&0x1FFFF;//
+ pout=dellius(t,gyo,lamp);
+ if (FLIPPERAT) t++;
+ else t--; 
+ t=t&0x1FFFF;//
  if (SKIPPERAT)  {
-  if (lastskp==0) delayskp = delayptr;
+  if (lastskp==0) delayskp = t;
   lastskp = 1;
  } else {
-  if (lastskp) delayptr=delayskp;
+  if (lastskp) t=delayskp;
   lastskp = 0;
  } 
  REG(I2S_CONF_REG)[0] &= ~(BIT(5)); 
@@ -20,7 +20,7 @@ void IRAM_ATTR coco() {
  ASHWRITER(adc_read); //rand()
  REG(I2S_INT_CLR_REG)[0]=0xFFFFFFFF;
  REG(I2S_CONF_REG)[0] |= (BIT(5)); //start rx
- YELLOWERS(delayptr)
+ YELLOWERS(t)
 }
 
 
@@ -37,12 +37,12 @@ int tapsz=sizeof(myPlacers)>>2;
 
 void IRAM_ATTR echo() {
  INTABRUPT
- DACWRITER(ppread)
+ DACWRITER(pout)
  gyo=ADCREADER
- ppread =0;
+ pout =0;
  for (int i=0; i<tapsz; i++) 
-  ppread+=dellius((myPlacers[i]<<2)+i,gyo,lamp);
- ppread = ppread>>2;
+  pout+=dellius((myPlacers[i]<<2)+i,gyo,lamp);
+ pout = pout>>2;
  if (FLIPPERAT)
   for (int i=0; i<tapsz; i++)  //sizeof(myPlacers)
    myPlacers[i]++;
@@ -60,4 +60,23 @@ void IRAM_ATTR echo() {
  REG(I2S_INT_CLR_REG)[0]=0xFFFFFFFF;
  REG(I2S_CONF_REG)[0] |= (BIT(5)); //start rx
  YELLOWERS(myPlacers[0]+myPlacers[1]+myPlacers[2]+myPlacers[3]);
+}
+
+
+void IRAM_ATTR bytebeats() {
+ INTABRUPT
+ DACWRITER((pout&0xFFF))
+ gyo=ADCREADER
+ 
+ pout =t*(t&16384?7:5)*(3-(3&t>>9)+(3&t>>8))>>(3&-t>>(t&4096?2:16))|t>>3;
+
+ if (FLIPPERAT) t++;
+ else t--;
+ if (SKIPPERAT)  {} else {} 
+ REG(I2S_CONF_REG)[0] &= ~(BIT(5)); 
+ adc_read = EARTHREAD;
+ ASHWRITER(adc_read); //rand()
+ REG(I2S_INT_CLR_REG)[0]=0xFFFFFFFF;
+ REG(I2S_CONF_REG)[0] |= (BIT(5)); //start rx
+ YELLOWERS(pout);
 }

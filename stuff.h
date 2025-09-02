@@ -36,7 +36,7 @@ bool lamp;
 int tima;
 int timahi;
 int preset;
-void (*presets[2]) ();
+void (*presets[3]) ();
 
 void IRAM_ATTR doubleclicker() {
  INTABRUPT
@@ -51,9 +51,9 @@ void IRAM_ATTR doubleclicker() {
  REG(TIMG0_T0LOAD_REG)[0]=BIT(1);
 
  if (buttnow==0) 
-  if (tima<0x40000){
+  if (tima<0x80000){
    preset++;
-   preset = preset %2;
+   preset = preset %3;
    PRESETTER(presets[preset])
    //attachInterrupt(2,presets[0],FALLING);
   }
@@ -62,12 +62,12 @@ void IRAM_ATTR doubleclicker() {
 uint8_t *delaybuffa;
 uint8_t *delaybuffb;
 uint8_t *delptr; 
-static int delayptr;
+static int t;
 static int delayskp;
 static int lastskp;
 int adc_read;
 int gyo;
-int ppread; //persistent_red
+int pout; //persistent_red
 
 int dellius(int ptr, int val, bool but) {
  int zut,biz,forsh;
@@ -93,7 +93,7 @@ void initDEL() {
  delaybuffa=(uint8_t*)malloc((DELAYSIZE>>2)+(DELAYSIZE>>1));
  delaybuffb=(uint8_t*)malloc((DELAYSIZE>>2)+(DELAYSIZE>>1));
  delptr=delaybuffa;
- delayptr=0;
+ t=0;
 
  esp_task_wdt_init(30, false);
  
