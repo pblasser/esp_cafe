@@ -1,6 +1,7 @@
 #include "setup.h"
 
 #define ENNEAGRAM simpleHelpers
+
 #define SETUPPERS initDEL();
 #define BUTTONEST REG(GPIO_IN1_REG)[0]&0x1
 #define CLICKETTE(c) attachInterrupt(32,c,CHANGE);
@@ -53,7 +54,7 @@ void IRAM_ATTR doubleclicker() {
  if (buttnow==0) 
   if (tima<0x80000){
    preset++;
-   preset = preset %3;
+   preset = preset % PRESETAMT;
    PRESETTER(presets[preset])
    //attachInterrupt(2,presets[0],FALLING);
   }
