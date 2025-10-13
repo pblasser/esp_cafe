@@ -6,6 +6,7 @@
 #define BUTTONEST REG(GPIO_IN1_REG)[0]&0x1
 #define CLICKETTE(c) attachInterrupt(32,c,CHANGE);
 #define DOUBLECLK CLICKETTE(doubleclicker);
+#define LONGPRESS
 #define TRIPLECLK
 #define PRESETTER(p) attachInterrupt(2,p,FALLING);
 #define LAMPLIGHT \
