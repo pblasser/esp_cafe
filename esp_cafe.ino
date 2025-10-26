@@ -7,9 +7,12 @@
 #define PRESETAMT 2
 
 #include "synths.h"
+#include "wifi.h"
 
 void setup() { 
+  
  SETUPPERS
+ //theCoolWifiInitiation();
  lamp=true;
  LAMPLIGHT
  presets[0]=coco;
@@ -18,6 +21,14 @@ void setup() {
  FILLNOISE
  DOUBLECLK
  PRESETTER(coco)
+ 
 }
 
-void loop() {} 
+void loop() {
+  //theCodeToCheckAmperage();  theCodeToCheckAmperage();  theCodeToCheckAmperage();  
+  //theCodeToCheckAmperage();  theCodeToCheckAmperage();  theCodeToCheckAmperage();  
+  //WiFi.mode(WIFI_OFF);
+  //esp_wifi_stop();
+  //delay(9000);
+  
+} 

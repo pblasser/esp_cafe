@@ -20,3 +20,7 @@
 
 //low fre quency filter array to take quantum 
 //and make it soft undulations
+
+
+
+//triggered percussion
