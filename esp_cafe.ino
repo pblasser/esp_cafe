@@ -7,7 +7,7 @@
 #define PRESETAMT 2
 
 #include "synths.h"
-#include "wifi.h"
+//#include "wifi.h"
 
 void setup() { 
   

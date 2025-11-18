@@ -86,7 +86,7 @@ int dellius(int ptr, int val, bool but) {
  if (!but) {
   delptr[(ptr>>1)+biz]=(uint8_t)(val>>4);
   delptr[(ptr>>1)+1-biz]&=(uint8_t)(0xF<<(4-forsh));
-  delptr[(ptr>>1)+1-biz]|=(uint8_t)(val&(0xF<<forsh));
+  delptr[(ptr>>1)+1-biz]|=(uint8_t)((val&0xF)<<forsh);
  }
  return zut;
 }
@@ -97,7 +97,7 @@ void initDEL() {
  delptr=delaybuffa;
  t=0;
 
- esp_task_wdt_init(30, false);
+ //esp_task_wdt_init(30, false);
  
  REG(ESP32_SENS_SAR_DAC_CTRL1)[0] = 0x0; 
  REG(ESP32_SENS_SAR_DAC_CTRL2)[0] = 0x0; 
