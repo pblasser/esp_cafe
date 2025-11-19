@@ -67,10 +67,16 @@ void IRAM_ATTR doubleclicker() {
 //       NOWPRIMER (t&0xFFFF)
 //       NOWTRICER (NOWPRIMER*3)
 //       NOWDICERS (NOWTRICER&1)
+//       NOWFORCER (NOWDICERS<<2)
 //NOWBUFFER=BUFFERERS[BUFSELECT];
 //int inputters was already ADCREADER
+//persistor is the accumulator
+//PRE: persistor = 0
 //TWIWRITER
-//NOWBUFFER+=NOWTRICER
+//NOWBUFFER+=NOWTRICER>>1
+//persistor+=&(NOWBUFFER+NOWDICER<<4)|(NOWBUFFER+1-NOWDICER<<4)
+//currently gave up on macro inlining but you can try
+
 uint8_t *delaybuffa;
 uint8_t *delaybuffb;
 uint8_t *delptr; 
