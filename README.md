@@ -5,12 +5,13 @@ This code nestles in the 90s couch of the cafe series instruments by ciat lonbar
 
 ## Setup
 - Buy the instrument. Thanks for your support. You will need a computer with USB connection and a USB cord, such as HP Pavillion or Dell Thinkpad. You can buy a cd of Redhat Linux at your local borders books if you drive there. Devote a few afternoons to properly installing the disc.
-- After using your modem to connect to the internet, download arduino. In arduino, click to tools, boards, board manager..., and tap esp32 in search bar. Rustling it out, crunching it into your creel. Note, we want the righteous warez from esspressif proper.
+- After using your modem to connect to the internet, download arduino. In arduino, click to tools, boards, board manager..., and tap esp32 in search bar. We want the righteous esp32 warez from Espressif systems.
+- Have an espresso.
 - Now pick board ESP32 Dev Module.
-- You can now open
+- You can now double click esp_cafe.ino in the code folder that you downloaded.
+- Click upload. If a new update comes out, please re-download, or if you know git, do a git pull.
 
-
-## Cafeteria_mono
+## About the modules
 Cafeteria_mono is the first release of the new cafe series by Ciat Lonbarde. It is composed of a digital delay/processor called the digital_cafe, and also an analog section called quantum_experiment, and a special edition theremin dubstep instrument, the tier_horn. The digital_cafe, using an esp32, is progammable and hackable. To do that, start by visiting github.com/pblasser/esp_cafe, and learning to upload your own versions by arduino. 
 
 The Cafeteria is a mono instrument, but it will be followed shortly in a few months by another new release, called Cafe_Quantum, which reproduces the modular layout and stereo capabilities of its predecessor, the Cocoquantus. Both channels of the new Cafe_Quantum will also be programmable. It will also have a preamp, like the original.
