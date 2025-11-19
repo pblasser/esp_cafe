@@ -61,6 +61,16 @@ void IRAM_ATTR doubleclicker() {
   }
 }
 
+//uint8* BUFFERERS[2]
+//uint8* NOWBUFFER
+//       BUFSELECT (t&0x10000)>>16
+//       NOWPRIMER (t&0xFFFF)
+//       NOWTRICER (NOWPRIMER*3)
+//       NOWDICERS (NOWTRICER&1)
+//NOWBUFFER=BUFFERERS[BUFSELECT];
+//int inputters was already ADCREADER
+//TWIWRITER
+//NOWBUFFER+=NOWTRICER
 uint8_t *delaybuffa;
 uint8_t *delaybuffb;
 uint8_t *delptr; 
