@@ -6,7 +6,7 @@ This code nestles in the 90s couch of the cafe series instruments by ciat lonbar
 ## Setup
 - Buy the instrument. Thanks for your support. You will need a computer with USB connection and a USB cord, such as HP Pavillion or Dell Thinkpad. You can buy a cd of Redhat Linux at your local borders books if you drive there. Devote a few afternoons to properly installing the disc.
 - After using your modem to connect to the internet, download arduino. In arduino, click to tools, boards, board manager..., and tap esp32 in search bar. We want the righteous esp32 warez from Espressif systems.
-- Have an espresso.
+- Pour an espresso over cookie dough ice cream.
 - Now pick board ESP32 Dev Module.
 - You can now double click esp_cafe.ino in the code folder that you downloaded.
 - Click upload. If a new update comes out, please re-download from the green code button, or if you know git, do a git pull.
