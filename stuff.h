@@ -61,6 +61,11 @@ void IRAM_ATTR doubleclicker() {
   }
 }
 
+//flickerclicker
+//holder
+//tripleclicker
+
+//trinary memory access delay
 //uint8* BUFFERERS[2]
 //uint8* NOWBUFFER
 //       BUFSELECT (t&0x10000)>>16
@@ -76,6 +81,24 @@ void IRAM_ATTR doubleclicker() {
 //NOWBUFFER+=NOWTRICER>>1
 //persistor+=&(NOWBUFFER+NOWDICER<<4)|(NOWBUFFER+1-NOWDICER<<4)
 //currently gave up on macro inlining but you can try
+//best is with registrs
+//r1 nowbuffer=bufferrers[t>>16&1]
+//r2 nowtricer (t&0xFFFF)*3
+//r1 add r1, r2>>1
+//r2 and r2, 1
+//r3 load [r1, r2]
+//r2 not r2
+//r4 load [r1, r2+2]
+//r2 not r2
+//
+//r3 lsl r3, 4
+//r4 lsr r3, [r2, lsl 4]
+//r4 and r4, 0xF
+// r3 add r3, r4
+
+//if(!but)
+//r4=adcread
+//storebyte
 
 uint8_t *delaybuffa;
 uint8_t *delaybuffb;
