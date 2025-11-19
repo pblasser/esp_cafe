@@ -17,6 +17,9 @@ This code nestles in the 90s couch of the cafe series instruments by cat rumba. 
 - Both instruments come in mono and stereo formats.
 
 ## Files overview
+This is supposed to reflect a basic self-contained operating system for sound coming in, looping, at a speed chosen by external oscillator, with external parameters by banana, and the two basic (non-mediatic) controls: a button and an orange lamp. The yellow banana is raw data output, earth banana is a cv input, and ash banana is an auxiliary output.
+
+- the ino is your entry. the setup function should show a basic preset configuration and any sauces you may choose. the loop is empty because sound is "just in time" triggered by an interrupt. also, button clicking is by interrupt.
 - The synths file holds the basic interrupt routines. They are like presets for different sounds.
 - It depends on stuff, which is a list of enneagram macros concretely related to the physical module.
 - Stuff also offers some routines for managing presets through double clicks and so on.
