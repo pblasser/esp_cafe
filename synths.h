@@ -1,7 +1,8 @@
 #include "stuff.h"
 
 void IRAM_ATTR coco() {
- INTABRUPT
+ //INTABRUPT
+ //REG(GPIO_STATUS_W1TC_REG)[0]=0xFFFFFFFF; 
  DACWRITER(pout)
  gyo=ADCREADER
  pout=dellius(t,gyo,lamp);
@@ -21,6 +22,7 @@ void IRAM_ATTR coco() {
  REG(I2S_INT_CLR_REG)[0]=0xFFFFFFFF;
  REG(I2S_CONF_REG)[0] |= (BIT(5)); //start rx
  YELLOWERS(t)
+ 
 }
 
 
@@ -36,7 +38,8 @@ int myPlacers[] = {0, 0, 0, 0};
 int tapsz=sizeof(myPlacers)>>2;
 
 void IRAM_ATTR echo() {
- INTABRUPT
+ //INTABRUPT
+ //REG(GPIO_STATUS_W1TC_REG)[0]=0xFFFFFFFF; 
  DACWRITER(pout)
  gyo=ADCREADER
  pout =0;
