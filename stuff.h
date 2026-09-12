@@ -38,13 +38,16 @@ bool lamp;
 int tima;
 int timahi;
 int preset;
+int xfado;
 void (*presets[3]) ();
+#define CROSSFADE (1<<(CROSSBITE))
 
 void IRAM_ATTR doubleclicker() {
  //INTABRUPT
  //REG(GPIO_STATUS1_W1TC_REG)[0]=0xFFFFFFFF;
  int buttnow = BUTTONEST;
  if (buttnow) lamp=!lamp;
+ xfado=CROSSFADE;
  LAMPLIGHT
  
  REG(TIMG0_T0UPDATE_REG)[0]=BIT(1);
@@ -112,6 +115,7 @@ int adc_read;
 int gyo;
 int pout; //persistent_red
 
+
 int dellius(int ptr, int val, bool but) {
  int zut,biz,forsh;
  if (ptr&0x10000) 
@@ -124,7 +128,13 @@ int dellius(int ptr, int val, bool but) {
  forsh = biz << 2;
  zut = delptr[(ptr>>1)+biz]<<4;
  zut |= (delptr[(ptr>>1)+1-biz]&(0xF<<(forsh)))>>(forsh);
- if (!but) {
+
+ if (!but) || (but&&(xfado>0)){
+  if (xfado>0) {
+   val=(val*xfado>>CROSSBITE);
+   val+=zut*(CROSSFADE-xfado)>>CROSSBITE;   
+   xfado--;
+  }
   delptr[(ptr>>1)+biz]=(uint8_t)(val>>4);
   delptr[(ptr>>1)+1-biz]&=(uint8_t)(0xF<<(4-forsh));
   delptr[(ptr>>1)+1-biz]|=(uint8_t)((val&0xF)<<forsh);
@@ -137,6 +147,7 @@ void initDEL() {
  delaybuffb=(uint8_t*)malloc((DELAYSIZE>>2)+(DELAYSIZE>>1));
  delptr=delaybuffa;
  t=0;
+ xfado=0;
 
  //esp_task_wdt_init(30, false);
  
