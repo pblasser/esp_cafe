@@ -5,7 +5,10 @@
 
 #define BYTECODES t*(t&16384?7:5)*(3-(3&t>>9)+(3&t>>8))>>(3&-t>>(t&4096?2:16))|t>>3; 
 #define PRESETAMT 2
-#define CROSSBITE 8 //set to -1 for no crossfade on sample
+#define CROSSBITE 8 
+//crossbite at 8 means about 1/512 of the loop 
+//will be dedicated to crossading at delay/sample transitions.
+//set to -1 for no crossfade on sample
 
 #include "synths.h"
 //#include "wifi.h"
